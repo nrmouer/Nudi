@@ -1,0 +1,18 @@
+---
+title: "Working"
+format: html
+editor: visual
+---
+
+```{r}
+library("tidyverse")
+library("usethis")
+library("gitcreds")
+```
+
+```{r}
+usethis::use_git_config(user.name = "nrmouer", user.email = "nora.mouer@my.jcu.edu.au")
+credentials::set_github_pat("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")
+usethis::git_sitrep()
+
+```
