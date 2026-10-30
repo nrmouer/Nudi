@@ -9,10 +9,19 @@ library("tidyverse")
 library("usethis")
 library("gitcreds")
 library('readxl')
+library("gert")
+library("glue")
 ```
+
+
 ```{r}
 nudi_data <- read_excel(here::here("data/nudidata.xlsx"))
 nudi_data
+
+```
+
+```{r}
+usethis::git_sitrep()
 
 ```
 
