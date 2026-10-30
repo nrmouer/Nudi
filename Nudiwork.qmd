@@ -21,7 +21,7 @@ nudi_data
 ```
 
 ```{r}
-usethis::git_sitrep()
+library("nudibranch")
 
 ```
-
+ 
