@@ -8,14 +8,11 @@ editor: visual
 library("tidyverse")
 library("usethis")
 library("gitcreds")
+library('readxl')
 ```
-
 ```{r}
-credentials::set_github_pat("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")
+nudi_data <- read_excel(here::here("data/nudidata.xlsx"))
+nudi_data
 
 ```
 
-```{r}
-usethis::git_sitrep()
-
-```
