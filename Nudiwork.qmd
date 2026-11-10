@@ -11,17 +11,65 @@ library("gitcreds")
 library('readxl')
 library("gert")
 library("glue")
+library("nudibranch")
+library("stringr")
+library("dplyr")
 ```
 
 
-```{r}
+```{r upload data}
 nudi_data <- read_excel(here::here("data/nudidata.xlsx"))
 nudi_data
 
 ```
 
+
+
 ```{r}
-library("nudibranch")
+# Clean the place_guess column
+clean_nudi_data <- nudi_data %>%
+  mutate(place_guess = case_when(
+    place_guess %in% c("Ammitsa Beach, Greece", "Ammitsa") ~ "Ammitsa",
+    place_guess %in% c("Pounta, South Pelion, Greece") ~ "Pounta",
+    place_guess %in% c("Vlachorema, Greece", "Vlachorema", "Vlachorema, Pelion") ~ "Vlachorema",
+    place_guess %in% c("Platanias Beach", "Platanias") ~ "Platanias",
+    place_guess %in% c("Neraki cave, Pelion", "Neraki beach, Pelion", "Neraki Cave, Pelion", "Neraki cave", "Neraki") ~ "Neraki",
+    place_guess %in% c("Liri beach, Pelion", "Liri beach", "Liri") ~ "Liri",
+    place_guess %in% c("Theotokos beach, Pelion") ~ "Theotokos",
+    place_guess %in% c("Mourtias beach") ~ "Mourtias",
+    TRUE ~ place_guess)) # Keeps all other site names unchanged
+    
+  
+  
+
+#view to make sure everything is labeled correctly
+table(clean_nudi_data$place_guess)
+
+clean_nudi_data |> 
+  distinct(place_guess)
+```
+
+```{r}
+#
+cleaned_nudi_data<- clean_nudi_data |>
+  mutate(
+place_guess = str_to_lower(place_guess),
+place_guess = str_replace_all(place_guess, pattern = " ", replacement = "_"),
+place_guess = str_trim(place_guess)
+  )
+
+print(cleaned_nudi_data$place_guess)
+```
+```{r}
+#graph cleaned nudi data of taxon_genus_name and place_guess
+ggplot(cleaned_nudi_data, aes(x = place_guess, fill = taxon_genus_name)) +
+  geom_bar(position = "dodge") +
+  labs(title = "Nudibranch Observations by Location and Genus",
+       x = "Location",
+       y = "Count of Observations",
+       fill = "Genus Name") +
+  theme(nudibranch_palette("hypselodoris")) +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
 
 ```
- 
+
