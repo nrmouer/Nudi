@@ -16,14 +16,11 @@ library("stringr")
 library("dplyr")
 ```
 
-
 ```{r upload data}
 nudi_data <- read_excel(here::here("data/nudidata.xlsx"))
 nudi_data
 
 ```
-
-
 
 ```{r}
 # Clean the place_guess column
@@ -60,6 +57,7 @@ place_guess = str_trim(place_guess)
 
 print(cleaned_nudi_data$place_guess)
 ```
+
 ```{r}
 #graph cleaned nudi data of taxon_genus_name and place_guess
 ggplot(cleaned_nudi_data, aes(x = place_guess, fill = taxon_genus_name)) +
@@ -72,4 +70,3 @@ ggplot(cleaned_nudi_data, aes(x = place_guess, fill = taxon_genus_name)) +
   theme(axis.text.x = element_text(angle = 45, hjust = 1))
 
 ```
-

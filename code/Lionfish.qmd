@@ -1,0 +1,29 @@
+---
+title: "Untitled"
+format: html
+editor: visual
+---
+
+```{r}
+#load robis and other tools
+library("robis")
+library("tidyverse")
+library("nudibranch")
+library("stringr")
+library("dplyr")
+```
+
+```{r}
+#
+library(robis)
+lionfish_data <- occurrence("Pterois volitans")
+
+```
+
+```{r}
+#practice
+# Example: Search for Pterois volitans recorded after the year 2000
+lionfish_recent <- occurrence(scientificname = "Pterois volitans", startdate = "2000-01-01")
+
+map_ggplot(lionfish_data)
+```
