@@ -1,0 +1,162 @@
+---
+title: "Seaturtle"
+format: html
+editor: visual
+---
+
+```{r}
+library("robis")
+library("tidyverse")
+library("ggplot2")
+library("lubridate")
+library("stringr")
+library("dplyr")
+library("sf")
+library("here")
+
+```
+
+```{r}
+# Fetch all occurrences of Green Sea Turtles
+turtles_raw <- robis::occurrence(
+  scientificname = "Chelonia mydas",
+  startdate = "2015-01-01",
+  enddate = "2025-12-31",
+  fields = c("occurrenceID", "scientificName", "decimalLatitude", 
+             "decimalLongitude", "individualCount", "eventDate")
+)
+
+# Convert the download into a spatial (sf) object using standard coordinates (WGS84)
+turtles_sf <- turtles_raw %>%
+  filter(!is.na(decimalLongitude) & !is.na(decimalLatitude)) %>% 
+  st_as_sf(coords = c("decimalLongitude", "decimalLatitude"), crs = 4326)
+
+
+
+```
+
+```{r}
+# Tell GDAL to automatically rebuild the missing .shx file
+sf::sf_extSoftVersion()["GDAL"] # (Optional: just to confirm sf is using GDAL)
+Sys.setenv(SHAPE_RESTORE_SHX = "YES")
+
+# read shapefile and convert coordinate system to (WGS 84)
+gbr_mpa <- sf::st_read("C:/Users/nrmou/OneDrive/Documents/TechniquesMS/Nudi/data/GBR_MPA.shp")
+
+st_crs(gbr_mpa) <- 4326
+
+```
+
+```{r}
+#check both coordinate reference systems
+st_crs(turtles_sf)
+
+st_crs(gbr_mpa)
+```
+
+```{r}
+# Extract records that fall within the MPA boundaries
+turtles_in_mpas <- st_intersection(turtles_sf, gbr_mpa)
+
+```
+
+```{r}
+# Filter for records that contain explicit abundance numbers
+abundance_records <- turtles_in_mpas %>%
+  filter(!is.na(individualCount) & individualCount > 0) %>%
+  as_tibble() %>% # Convert from spatial back to regular dataframe for easy viewing
+  select(scientificName, eventDate, individualCount) 
+  # Note: Change 'NAME' to match the column designation for names inside your MPA shapefile
+
+# View the final dataset
+print(abundance_records)
+
+```
+
+```{r}
+```
+
+```{r}
+```
+
+```{r}
+# 1. Sort the data so smaller counts are plotted first, and larger counts are plotted on top
+# Convert the column to numeric first
+turtles_in_mpas <- turtles_in_mpas %>%
+  mutate(individualCount = as.numeric(individualCount))
+
+
+# 2. Plot the data
+ggplot() + 
+  geom_sf(data = gbr_mpa, fill = "lightblue", color = "black") + # MPA boundaries
+  geom_sf(data = turtles_in_mpas, aes(size = individualCount), color = "darkgreen", alpha = 0.6) + # Turtle occurrences
+  scale_size_continuous(name = "Individual Count", range = c(1, 10)) + # Fix: Changed to continuous
+  labs(title = "Green Sea Turtle Occurrences within the GBR Marine Park", 
+       subtitle = "2015-2025", 
+       x = "Longitude", 
+       y = "Latitude") + 
+  theme_minimal() + 
+  theme(legend.position = "right")
+
+
+```
+```{r}
+ggsave("C:/Users/nrmou/OneDrive/Documents/TechniquesMS/Nudi/output/turtle_GBR.png", width = 10, height = 8, dpi = 300)
+```
+
+```{r}
+#new graph with more color and better legend
+ggplot() + 
+  geom_sf(
+    data = gbr_mpa,
+    fill = "lightblue",
+    color = "black"
+  ) +
+  geom_sf(
+    data = turtles_in_mpas,
+    aes(
+      size = individualCount,
+      color = individualCount
+    ),
+    alpha = 0.8
+  ) +
+  scale_size_continuous(
+    name = "Individual Count",
+    range = c(1, 10)
+  ) +
+  scale_color_gradientn(
+    name = "Turtle Abundance",
+    colours = c("yellow", "orange", "red", "darkred")
+  ) +
+  labs(
+    title = "Green Sea Turtle Occurrences within the GBR Marine Park",
+    subtitle = "2015-2025",
+    x = "Longitude",
+    y = "Latitude"
+  ) +
+  theme_minimal() +
+  theme(
+    legend.position = "right"
+  )
+```
+```{r}
+#save image with coloration for abundance 
+ggsave("C:/Users/nrmou/OneDrive/Documents/TechniquesMS/Nudi/output/turtle_GBR_colored.png", width = 10, height = 8, dpi = 300)
+```
+
+
+```{r}
+ggplot() + 
+  geom_sf(data = gbr_mpa, fill = "lightblue", color = "darkblue") + 
+  # Use the sorted data here
+  geom_sf(data = turtles_sorted, aes(color = individualCount), size = 2) + 
+  # Changed _d to _c because individualCount is numeric/continuous
+  scale_color_viridis_c(option = "plasma", name = "Abundance") + 
+  labs(title = "Green Sea Turtle Occurrences within the GBR Marine Park", 
+       subtitle = "Colored by Individual Count", 
+       x = "Longitude", 
+       y = "Latitude") + 
+  theme_minimal()
+
+```
+
