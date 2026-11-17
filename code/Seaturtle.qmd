@@ -100,6 +100,7 @@ ggplot() +
 
 
 ```
+
 ```{r}
 ggsave("C:/Users/nrmou/OneDrive/Documents/TechniquesMS/Nudi/output/turtle_GBR.png", width = 10, height = 8, dpi = 300)
 ```
@@ -139,11 +140,11 @@ ggplot() +
     legend.position = "right"
   )
 ```
+
 ```{r}
 #save image with coloration for abundance 
 ggsave("C:/Users/nrmou/OneDrive/Documents/TechniquesMS/Nudi/output/turtle_GBR_colored.png", width = 10, height = 8, dpi = 300)
 ```
-
 
 ```{r}
 ggplot() + 
@@ -159,4 +160,3 @@ ggplot() +
   theme_minimal()
 
 ```
-

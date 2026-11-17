@@ -1,0 +1,221 @@
+---
+title: "turtlehistogram"
+format: html
+editor: visual
+---
+
+```{r}
+library("robis")
+library("tidyverse")
+library("ggplot2")
+library("lubridate")
+library("stringr")
+library("dplyr")
+library("sf")
+library("here")
+library("ggspatial")
+library("prettymapr")
+library("leaflet")
+
+
+```
+```{r}
+#load gbr map
+# Tell GDAL to automatically rebuild the missing .shx file
+sf::sf_extSoftVersion()["GDAL"] # (Optional: just to confirm sf is using GDAL)
+Sys.setenv(SHAPE_RESTORE_SHX = "YES")
+
+# read shapefile and convert coordinate system to (WGS 84)
+gbr_mpa <- sf::st_read("C:/Users/nrmou/OneDrive/Documents/TechniquesMS/Nudi/data/GBR_MPA.shp")
+
+st_crs(gbr_mpa) <- 4326
+```
+
+
+```{r}
+# Fetch sea turtle data within the GBR bounding box from OBIS
+turtle_data <- robis::occurrence(
+  scientificname = "Chelonia mydas", 
+  geometry = "POLYGON ((142 -25, 142 -10, 154 -10, 154 -25, 142 -25))"
+)
+
+# Preview the columns to look for tracking identifiers
+head(turtle_data)
+```
+
+```{r}
+# 2. Clean data and locate individual tracking identifiers
+# Telemetry datasets often store individual animal tags in 'individualID' or 'fieldNumber'.
+turtles_clean <- turtle_data %>%
+  filter(!is.na(decimalLatitude) & !is.na(decimalLongitude)) %>%
+  # Fallback to identify individual animals if standard columns are missing
+  mutate(individual_id = coalesce(organismID, fieldNumber, datasetID)) %>%
+  filter(!is.na(individual_id))
+```
+
+```{r}
+# 3. Identify the Top 5 individuals with the most tracking data points
+top_5_turtles <- turtles_clean %>%
+  count(individual_id, sort = TRUE) %>%
+  slice_max(n, n = 5) %>%
+  pull(individual_id)
+```
+
+```{r}
+# Filter the dataset to include only these 5 individuals
+turtles_top5 <- turtles_clean %>%
+  filter(individual_id %in% top_5_turtles) %>%
+  # Arrange by time if date/time stamps are present to ensure lines connect chronologically
+  arrange(individual_id, eventDate) 
+
+
+```
+
+```{r}
+# 4. Convert tabular data to spatial objects (SF)
+turtles_sf <- st_as_sf(
+  turtles_top5, 
+  coords = c("decimalLongitude", "decimalLatitude"), 
+  crs = 4326
+)
+
+# Group points into paths (lines) for migration visualization
+turtles_lines <- turtles_sf %>%
+  group_by(individual_id) %>%
+  summarize(do_union = FALSE) %>%
+  st_cast("LINESTRING")
+
+# Extract the bounding box of your turtle tracking data
+bb <- st_bbox(turtles_lines)
+
+```
+
+
+```{r}
+#make a graph showing the turtle mirgartion within the great barrier reef
+ggplot() +
+  geom_sf(data = gbr_mpa, fill = "lightblue", color = "darkblue", alpha = 0.5) +
+  geom_sf(data = turtles_lines, aes(color = individual_id), size = 1, alpha = 0.8) +
+  geom_sf(data = turtles_sf, aes(color = individual_id), size = 1.5, alpha = 0.6) +
+  scale_color_brewer(palette = "Set1", name = "Turtle ID") +
+  labs(title = "Green Sea Turtle Migration within the Great Barrier Reef",
+       subtitle = "Tracking data for top 5 individuals",
+       x = "Longitude", y = "Latitude") +
+  theme_minimal() +
+  annotation_scale(location = "bl", width_hint = 0.2) +
+  annotation_north_arrow(location = "tl", which_north = "true", 
+                         style = north_arrow_fancy_orienteering()) +
+  coord_sf(xlim = c(bb["xmin"], bb["xmax"]), 
+           ylim = c(bb["ymin"], bb["ymax"]), 
+           expand = TRUE) # Set expand = TRUE to give a small natural margin around the data
+```
+```{r}
+# Add a 10% buffer to longitude and latitude ranges
+x_range <- bb["xmax"] - bb["xmin"]
+y_range <- bb["ymax"] - bb["ymin"]
+buffer <- 5.0
+
+ggplot() +
+  geom_sf(data = gbr_mpa, fill = "lightblue", color = "darkblue", alpha = 0.5) +
+  geom_sf(data = turtles_lines, aes(color = individual_id), size = 1, alpha = 0.8) +
+  geom_sf(data = turtles_sf, aes(color = individual_id), size = 1.5, alpha = 0.6) +
+  scale_color_brewer(palette = "Set1", name = "Turtle ID") +
+  labs(title = "Green Sea Turtle Migration within the Great Barrier Reef",
+       subtitle = "Tracking data for top 5 individuals",
+       x = "Longitude", y = "Latitude") +
+  theme_minimal() +
+  annotation_scale(location = "bl", width_hint = 0.2) +
+  annotation_north_arrow(location = "tl", which_north = "true", 
+                         style = north_arrow_fancy_orienteering()) +
+  coord_sf(xlim = c(bb["xmin"] - (x_range * buffer), bb["xmax"] + (x_range * buffer)), 
+           ylim = c(bb["ymin"] - (y_range * buffer), bb["ymax"] + (y_range * buffer)), 
+           expand = FALSE)
+```
+
+
+
+```{r}
+#make a graph showing the turtle mirgartion within the great barrier reef
+
+ggplot() +
+
+  geom_sf(data = gbr_mpa, fill = "lightblue", color = "darkblue", alpha = 0.5) +
+
+  geom_sf(data = turtles_lines, aes(color = individual_id), size = 1, alpha = 0.8) +
+
+  geom_sf(data = turtles_sf, aes(color = individual_id), size = 1.5, alpha = 0.6) +
+
+  scale_color_brewer(palette = "Set1", name = "Turtle ID") +
+
+  labs(title = "Green Sea Turtle Migration within the Great Barrier Reef",
+
+       subtitle = "Tracking data for top 5 individuals",
+
+       x = "Longitude", y = "Latitude") +
+
+  theme_minimal() +
+
+  annotation_scale(location = "bl", width_hint = 0.2) +
+
+  annotation_north_arrow(location = "tl", which_north = "true", 
+
+                         style = north_arrow_fancy_orienteering())+
+
+  coord_sf(xlim = c(142, 154), ylim = c(-24, -10), expand = FALSE)  
+```
+
+```{r}
+# 5. Build and plot the migration map
+ggplot() +
+  # Add a background map layer using OpenStreetMap or standard base maps
+  annotation_map_tile(type = "osm", zoom = 6) +
+  
+  # Plot migration tracks as paths
+  geom_sf(data = turtles_lines, aes(color = individual_id), size = 1, alpha = 0.8) +
+  
+  # Plot exact recorded locations as points
+  geom_sf(data = turtles_sf, aes(color = individual_id), size = 1.5, alpha = 0.6) +
+  
+  # Map aesthetics and labels
+  scale_color_brewer(palette = "Set1", name = "Turtle ID") +
+  labs(
+    title = "Migration Pathways of Top 5 Green Sea Turtles",
+    subtitle = "Great Barrier Reef Region (Data sourced via robis)",
+    x = "Longitude", 
+    y = "Latitude"
+  ) +
+  theme_minimal() +
+  annotation_scale(location = "bl", width_hint = 0.2) +
+  annotation_north_arrow(location = "tl", which_north = "true")
+```
+
+
+```{r}
+turtles <- robis::occurrence(
+  scientificname = "Chelonia mydas",
+  startdate = "2000-01-01",
+  enddate = "2025-12-31",
+  fields = c("occurrenceID", "scientificName", "decimalLatitude", 
+             "decimalLongitude", "individualCount", "eventDate")
+)
+```
+
+```{r}
+# Assuming 'turtles' is your loaded OBIS dataframe filtered for Chelonia mydas
+turtles$year <- as.numeric(format(as.Date(turtles$eventDate), "%Y"))
+
+# 1. Histogram of observations over time
+ggplot(turtles, aes(x = year)) +
+  geom_histogram(binwidth = 2, fill = "forestgreen", color = "white") +
+  labs(title = "Green Sea Turtle (*Chelonia mydas*) Records Over Time",
+       x = "Year", y = "Observation Count") +
+  theme_minimal()
+
+# 2. Basic spatial scatter plot of coordinates
+ggplot(turtles, aes(x = decimalLongitude, y = decimalLatitude)) +
+  geom_point(alpha = 0.5, color = "darkgreen", size = 1) +
+  coord_quickmap() +
+  labs(title = "Green Sea Turtle Spatial Distribution",
+       x = "Longitude", y = "Latitude") +
+  theme_bw()
+```
